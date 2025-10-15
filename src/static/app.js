@@ -1,4 +1,33 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Event delegation for delete icon
+  activitiesList.addEventListener("click", async (event) => {
+    if (event.target.classList.contains("delete-participant")) {
+      const activity = event.target.getAttribute("data-activity");
+      const participant = event.target.getAttribute("data-participant");
+      try {
+        const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(participant)}`, {
+          method: "POST"
+        });
+        const result = await response.json();
+        if (response.ok) {
+          messageDiv.textContent = result.message || "Participant unregistered.";
+          messageDiv.className = "success";
+          fetchActivities();
+        } else {
+          messageDiv.textContent = result.detail || "Failed to unregister participant.";
+          messageDiv.className = "error";
+        }
+      } catch (error) {
+        messageDiv.textContent = "Error unregistering participant.";
+        messageDiv.className = "error";
+        console.error("Error unregistering participant:", error);
+      }
+      messageDiv.classList.remove("hidden");
+      setTimeout(() => {
+        messageDiv.classList.add("hidden");
+      }, 5000);
+    }
+  });
   const activitiesList = document.getElementById("activities-list");
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
@@ -27,9 +56,14 @@ document.addEventListener("DOMContentLoaded", () => {
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
           <div class="participants">
             <strong>Participants:</strong>
-            <ul>
-              ${details.participants.map(participant => `<li>${participant}</li>`).join('')}
-            </ul>
+              <ul style="list-style-type: none; padding-left: 0;">
+                ${details.participants.map(participant => `
+                  <li style="display: flex; align-items: center;">
+                    <span>${participant}</span>
+                    <button class="delete-participant" title="Unregister" data-activity="${name}" data-participant="${participant}" style="background: none; border: none; color: #c00; margin-left: 8px; cursor: pointer; font-size: 1.2em;">&#x1F5D1;</button>
+                  </li>
+                `).join('')}
+              </ul>
           </div>
         `;
 
@@ -68,6 +102,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+          // Refresh activities list so new participant appears immediately
+          fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
